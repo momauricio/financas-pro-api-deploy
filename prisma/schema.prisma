@@ -1,0 +1,249 @@
+// Prisma schema mirrored from live Supabase project YOUR_PROJECT_REF.
+// DB remains managed by Supabase; this API uses the same Postgres.
+// Do not invent columns — pull with `prisma db pull` when DATABASE_URL is available.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  name      String
+  type      String
+  color     String?  @default("#4f46e5")
+  active    Boolean? @default(true)
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId], map: "categories_user_id_idx")
+  @@map("categories")
+}
+
+model CreditCard {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  name       String
+  brand      String?
+  /// Column name is "limit" in Postgres (reserved word).
+  creditLimit Decimal? @default(0) @map("limit") @db.Decimal
+  closingDay Int
+  dueDay     Int
+  active     Boolean? @default(true)
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId], map: "credit_cards_user_id_idx")
+  @@map("credit_cards")
+}
+
+model Transaction {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                String?   @map("user_id") @db.Uuid
+  description           String
+  amount                Decimal   @db.Decimal
+  category              String
+  date                  DateTime  @db.Date
+  isPaid                Boolean?  @default(false)
+  type                  String
+  isFixed               Boolean?  @default(false)
+  paymentMethod         String?
+  cardId                String?   @db.Uuid
+  invoiceMonthId        String?
+  installments          Json?
+  createdAt             DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  recurringGroupId      String?   @db.Uuid
+  investmentAssetId     String?   @db.Uuid
+  purchaseUsdRate       Decimal?  @db.Decimal
+  sharesBought          Decimal?  @db.Decimal
+  refundOfTransactionId String?   @db.Uuid
+
+  @@index([userId, date(sort: Desc)], map: "transactions_user_date_idx")
+  @@index([userId, invoiceMonthId], map: "transactions_user_invoice_idx")
+  @@index([recurringGroupId], map: "idx_transactions_recurring_group")
+  @@map("transactions")
+}
+
+model Goal {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?   @map("user_id") @db.Uuid
+  monthId   String    @map("month_id")
+  category  String
+  amount    Decimal   @db.Decimal
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([userId, monthId, category], map: "goals_user_id_month_id_category_key")
+  @@map("goals")
+}
+
+model InvoicePayment {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?   @map("user_id") @db.Uuid
+  monthId   String    @map("month_id")
+  cardId    String?   @map("card_id") @db.Uuid
+  isPaid    Boolean?  @default(false) @map("is_paid")
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([userId, monthId, cardId], map: "invoice_payments_user_id_month_id_card_id_key")
+  @@map("invoice_payments")
+}
+
+model UserProfile {
+  userId         String    @id @map("user_id") @db.Uuid
+  initialBalance Decimal?  @default(0) @map("initial_balance") @db.Decimal
+  updatedAt      DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("user_profiles")
+}
+
+model InvestmentAsset {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String    @map("user_id") @db.Uuid
+  name                 String
+  type                 String
+  institution          String
+  currency             String    @default("BRL")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  ticker               String?
+  quantity             Decimal?  @db.Decimal
+  priceSource          String?   @map("price_source")
+  lastPrice            Decimal?  @map("last_price") @db.Decimal
+  lastPriceAt          DateTime? @map("last_price_at") @db.Timestamptz(6)
+  fixedIncomeIndex     String?   @map("fixed_income_index")
+  fixedIncomeRate      Decimal?  @map("fixed_income_rate") @db.Decimal
+  fixedIncomeMode      String?   @map("fixed_income_mode")
+  maturityDate         DateTime? @map("maturity_date") @db.Date
+  liquidity            String?
+  liquidityDate        DateTime? @map("liquidity_date") @db.Date
+  targetAllocationPct  Decimal?  @map("target_allocation_pct") @db.Decimal
+  targetBuyPrice       Decimal?  @map("target_buy_price") @db.Decimal
+  targetSellPrice      Decimal?  @map("target_sell_price") @db.Decimal
+
+  snapshots InvestmentSnapshot[]
+
+  @@map("investment_assets")
+}
+
+model InvestmentSnapshot {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assetId           String    @map("asset_id") @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  monthId           String    @map("month_id")
+  amount            Decimal   @default(0) @db.Decimal
+  usdRate           Decimal?  @default(1) @map("usd_rate") @db.Decimal
+  yieldAmount       Decimal?  @default(0) @map("yield_amount") @db.Decimal
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  manualOverride    Boolean?  @default(false) @map("manual_override")
+  rateAppliedMonthId String?  @map("rate_applied_month_id")
+
+  asset InvestmentAsset @relation(fields: [assetId], references: [id])
+
+  @@unique([assetId, monthId], map: "investment_snapshots_asset_id_month_id_key")
+  @@map("investment_snapshots")
+}
+
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId, createdAt(sort: Desc)], map: "audit_logs_user_created_idx")
+  @@map("audit_logs")
+}
+
+
+model UserPriceSettings {
+  userId                 String    @id @map("user_id") @db.Uuid
+  defaultAvgWindowDays   Int       @default(30) @map("default_avg_window_days")
+  emailAlertsEnabled     Boolean   @default(true) @map("email_alerts_enabled")
+  manualRefreshCount     Int       @default(0) @map("manual_refresh_count")
+  manualRefreshDay       DateTime? @map("manual_refresh_day") @db.Date
+  updatedAt              DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("user_price_settings")
+}
+
+model WatchedProduct {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  sourceUrl      String    @map("source_url")
+  title          String    @default("")
+  searchQuery    String    @default("") @map("search_query")
+  imageUrl       String?   @map("image_url")
+  avgWindowDays  Int       @default(30) @map("avg_window_days")
+  targetPrice    Decimal?  @map("target_price") @db.Decimal
+  active         Boolean   @default(true)
+  discoverStatus String    @default("pending") @map("discover_status")
+  discoverError  String?   @map("discover_error")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  offers ProductOffer[]
+  alerts PriceAlert[]
+
+  @@map("watched_products")
+}
+
+model ProductOffer {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  watchedProductId String    @map("watched_product_id") @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  store            String    @default("other")
+  offerUrl         String    @map("offer_url")
+  offerTitle       String    @default("") @map("offer_title")
+  matchScore       Decimal?  @map("match_score") @db.Decimal
+  matchStatus      String    @default("auto") @map("match_status")
+  isSource         Boolean   @default(false) @map("is_source")
+  lastPrice        Decimal?  @map("last_price") @db.Decimal
+  lastSeenAt       DateTime? @map("last_seen_at") @db.Timestamptz(6)
+  active           Boolean   @default(true)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  watchedProduct WatchedProduct @relation(fields: [watchedProductId], references: [id])
+  snapshots      OfferSnapshot[]
+
+  @@unique([watchedProductId, offerUrl], map: "product_offers_watched_product_id_offer_url_key")
+  @@map("product_offers")
+}
+
+model OfferSnapshot {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  offerId     String    @map("offer_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  price       Decimal   @db.Decimal
+  currency    String    @default("BRL")
+  listPrice   Decimal?  @map("list_price") @db.Decimal
+  availability String?
+  scrapedAt   DateTime  @default(now()) @map("scraped_at") @db.Timestamptz(6)
+  apifyRunId  String?   @map("apify_run_id")
+  raw         Json?
+
+  offer ProductOffer @relation(fields: [offerId], references: [id])
+
+  @@map("offer_snapshots")
+}
+
+model PriceAlert {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  watchedProductId String    @map("watched_product_id") @db.Uuid
+  offerId          String?   @map("offer_id") @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  trigger          String
+  price            Decimal   @db.Decimal
+  avgPrice         Decimal?  @map("avg_price") @db.Decimal
+  windowDays       Int?      @map("window_days")
+  notifiedEmailAt  DateTime? @map("notified_email_at") @db.Timestamptz(6)
+  readAt           DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  watchedProduct WatchedProduct @relation(fields: [watchedProductId], references: [id])
+
+  @@map("price_alerts")
+}
