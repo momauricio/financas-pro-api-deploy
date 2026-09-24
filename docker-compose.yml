@@ -1,0 +1,19 @@
+services:
+  financas-pro-api:
+    build: .
+    image: financas-pro-api:main
+    container_name: financas-pro-api
+    restart: unless-stopped
+    expose:
+      - "3001"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3001"
+  financas-pro-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: financas-pro-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://financas-pro-api:3001
+    depends_on:
+      - financas-pro-api
