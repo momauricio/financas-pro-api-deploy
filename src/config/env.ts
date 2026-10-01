@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+const emptyToUndefined = z
+  .string()
+  .optional()
+  .transform((v) => {
+    if (!v || v.trim() === '' || v.startsWith('YOUR_')) return undefined;
+    return v.trim();
+  });
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3001),
@@ -14,13 +22,17 @@ const envSchema = z.object({
    * Optional. Finanças-pro Auth uses ES256 JWKS — leave empty and verify via
    * `${SUPABASE_URL}/auth/v1/.well-known/jwks.json`. Set only for HS256 legacy.
    */
-  SUPABASE_JWT_SECRET: z
-    .string()
-    .optional()
-    .transform((v) => {
-      if (!v || v.trim() === '' || v.startsWith('YOUR_')) return undefined;
-      return v;
-    }),
+  SUPABASE_JWT_SECRET: emptyToUndefined,
+  /**
+   * Public anon / publishable key — used only as `apikey` when the API proxies
+   * Edge Functions server-side. Never expose service_role to the browser.
+   */
+  SUPABASE_ANON_KEY: emptyToUndefined,
+  /**
+   * Optional alternative `apikey` for Edge proxy (server-only). Prefer anon key;
+   * service role is accepted so VPS can reuse an existing secret without adding anon.
+   */
+  SUPABASE_SERVICE_ROLE_KEY: emptyToUndefined,
   AUTH_BYPASS_FOR_TESTS: z
     .string()
     .optional()

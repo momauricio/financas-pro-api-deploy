@@ -50,3 +50,16 @@ export class InsufficientFundsError extends AppError {
     super(message, 422, 'INSUFFICIENT_FUNDS');
   }
 }
+
+/** Upstream Edge / third-party failure — status often mirrored from the edge. */
+export class UpstreamError extends AppError {
+  constructor(message: string, statusCode = 502) {
+    const code =
+      statusCode === 429
+        ? 'RATE_LIMITED'
+        : statusCode >= 500
+          ? 'UPSTREAM_ERROR'
+          : 'UPSTREAM_CLIENT_ERROR';
+    super(message, statusCode, code);
+  }
+}
