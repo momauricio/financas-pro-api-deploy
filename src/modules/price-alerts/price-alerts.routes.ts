@@ -1,10 +1,9 @@
 /**
- * Price-alerts encapsulation — CRUD + reads only.
+ * Price-alerts encapsulation — CRUD + reads + Edge proxy for discover/check.
  *
- * Discover / check / ingest stay on Supabase Edge Functions
- * (`price-discover`, `price-check`, `price-ingest`). Do not break those.
- * This module owns JWT-scoped data access so the front can stop talking
- * to PostgREST for watched_products / offers / alerts / snapshots.
+ * Scraping stays on Supabase Edge (`price-discover`, `price-check`, `price-ingest`).
+ * The browser never calls those edges when using the API; JWT is required here and
+ * the API forwards the user token server-side (service/anon key stays on the VPS).
  */
 
 import type { FastifyInstance } from 'fastify';
@@ -144,5 +143,29 @@ export async function priceAlertsRoutes(app: FastifyInstance): Promise<void> {
       },
     },
     (req, reply) => priceAlertsController.getSettings(req, reply),
+  );
+
+  app.post(
+    '/discover',
+    {
+      schema: {
+        tags: ['price-alerts'],
+        summary: 'Discover product offers (proxies Edge price-discover)',
+        security: [{ bearerAuth: [] }],
+      },
+    },
+    (req, reply) => priceAlertsController.discover(req, reply),
+  );
+
+  app.post(
+    '/check',
+    {
+      schema: {
+        tags: ['price-alerts'],
+        summary: 'Manual price refresh (proxies Edge price-check)',
+        security: [{ bearerAuth: [] }],
+      },
+    },
+    (req, reply) => priceAlertsController.check(req, reply),
   );
 }

@@ -1,8 +1,11 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { UnauthorizedError } from '../../shared/errors/index.js';
 import {
   alertIdParamsSchema,
+  checkBodySchema,
   createOfferBodySchema,
   createProductBodySchema,
+  discoverBodySchema,
   offerIdParamsSchema,
   offersQuerySchema,
   productAverageQuerySchema,
@@ -13,6 +16,16 @@ import {
 import { PriceAlertsService } from './price-alerts.service.js';
 
 const service = new PriceAlertsService();
+
+function bearerToken(request: FastifyRequest): string {
+  const header = request.headers.authorization;
+  if (!header?.startsWith('Bearer ')) {
+    throw new UnauthorizedError('Missing Bearer token');
+  }
+  const token = header.slice('Bearer '.length).trim();
+  if (!token) throw new UnauthorizedError('Empty Bearer token');
+  return token;
+}
 
 export class PriceAlertsController {
   async listProducts(request: FastifyRequest, reply: FastifyReply) {
@@ -75,6 +88,18 @@ export class PriceAlertsController {
 
   async getSettings(request: FastifyRequest, reply: FastifyReply) {
     return reply.send(await service.getSettings(request.user!.id));
+  }
+
+  async discover(request: FastifyRequest, reply: FastifyReply) {
+    const body = discoverBodySchema.parse(request.body ?? {});
+    const result = await service.discoverProduct(bearerToken(request), body);
+    return reply.send(result);
+  }
+
+  async check(request: FastifyRequest, reply: FastifyReply) {
+    const body = checkBodySchema.parse(request.body ?? {});
+    const result = await service.runPriceCheck(bearerToken(request), body);
+    return reply.send(result);
   }
 }
 
