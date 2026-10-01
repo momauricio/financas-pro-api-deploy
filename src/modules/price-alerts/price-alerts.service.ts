@@ -1,9 +1,12 @@
 import { NotFoundError, ValidationError } from '../../shared/errors/index.js';
+import { invokeSupabaseEdge } from '../../shared/supabase-edge.js';
 import {
   FREE_MAX_OFFERS,
   FREE_MAX_PRODUCTS,
+  type checkBodySchema,
   type createOfferBodySchema,
   type createProductBodySchema,
+  type discoverBodySchema,
   type updateOfferBodySchema,
   type updateProductBodySchema,
 } from './price-alerts.schema.js';
@@ -15,6 +18,8 @@ type CreateBody = z.infer<typeof createProductBodySchema>;
 type UpdateBody = z.infer<typeof updateProductBodySchema>;
 type CreateOfferBody = z.infer<typeof createOfferBodySchema>;
 type UpdateOfferBody = z.infer<typeof updateOfferBodySchema>;
+type DiscoverBody = z.infer<typeof discoverBodySchema>;
+type CheckBody = z.infer<typeof checkBodySchema>;
 
 export class PriceAlertsService {
   constructor(
@@ -197,5 +202,30 @@ export class PriceAlertsService {
       manualRefreshCount: row.manualRefreshCount,
       manualRefreshDay: row.manualRefreshDay,
     };
+  }
+
+  /**
+   * Proxy to Edge `price-discover` — keeps Apify/scrape logic on Supabase.
+   * Caller JWT is forwarded; service keys never go to the browser.
+   */
+  async discoverProduct(accessToken: string, body: DiscoverBody) {
+    return invokeSupabaseEdge('price-discover', {
+      accessToken,
+      body: {
+        source_url: body.sourceUrl,
+        avg_window_days: body.avgWindowDays,
+        target_price: body.targetPrice ?? null,
+        title: body.title || '',
+        product_id: body.productId ?? null,
+      },
+    });
+  }
+
+  /** Proxy to Edge `price-check` for the authenticated user (manual refresh). */
+  async runPriceCheck(accessToken: string, _body: CheckBody = {}) {
+    return invokeSupabaseEdge('price-check', {
+      accessToken,
+      body: {},
+    });
   }
 }

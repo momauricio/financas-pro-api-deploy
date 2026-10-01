@@ -16,6 +16,7 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN}
       DATABASE_URL: ${DATABASE_URL}
       SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
     command:
       - sh
       - -c
