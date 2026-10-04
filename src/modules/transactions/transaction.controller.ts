@@ -25,6 +25,12 @@ export class TransactionController {
     return reply.status(201).send({ items: created });
   }
 
+  async refundable(request: FastifyRequest, reply: FastifyReply) {
+    const { id } = transactionIdParamsSchema.parse(request.params);
+    const result = await service.getRefundable(request.user!.id, id);
+    return reply.send(result);
+  }
+
   async update(request: FastifyRequest, reply: FastifyReply) {
     const { id } = transactionIdParamsSchema.parse(request.params);
     const body = updateTransactionBodySchema.parse(request.body);

@@ -90,4 +90,7 @@ export interface TransactionRepositoryPort {
     userId: string,
     recurringGroupId: string,
   ): Promise<TransactionRecord[]>;
+
+  /** Refund rows that point at `originalId` (ownership scoped). */
+  listRefundsOf(userId: string, originalId: string): Promise<TransactionRecord[]>;
 }

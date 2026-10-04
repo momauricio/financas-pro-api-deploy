@@ -23,11 +23,24 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['transactions'],
         summary:
-          'Create transaction(s) — expands fixed (×12) or installments; sets invoiceMonthId / refundOfTransactionId',
+          'Create transaction(s) — expands fixed (×12) or installments; partial refunds via refundOfTransactionId + amount ≤ remaining',
         security: [{ bearerAuth: [] }],
       },
     },
     (req, reply) => transactionController.create(req, reply),
+  );
+
+  app.get(
+    '/:id/refundable',
+    {
+      schema: {
+        tags: ['transactions'],
+        summary:
+          'Remaining refundable amount for a purchase (sum of prior refunds via refundOfTransactionId)',
+        security: [{ bearerAuth: [] }],
+      },
+    },
+    (req, reply) => transactionController.refundable(req, reply),
   );
 
   app.patch(
