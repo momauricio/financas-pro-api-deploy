@@ -31,6 +31,12 @@ export class TransactionController {
     return reply.send(result);
   }
 
+  async cancelRefund(request: FastifyRequest, reply: FastifyReply) {
+    const { id } = transactionIdParamsSchema.parse(request.params);
+    const result = await service.cancelRefund(request.user!.id, id);
+    return reply.send(result);
+  }
+
   async update(request: FastifyRequest, reply: FastifyReply) {
     const { id } = transactionIdParamsSchema.parse(request.params);
     const body = updateTransactionBodySchema.parse(request.body);

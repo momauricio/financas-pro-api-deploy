@@ -43,6 +43,19 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
     (req, reply) => transactionController.refundable(req, reply),
   );
 
+  app.post(
+    '/:id/cancel-refund',
+    {
+      schema: {
+        tags: ['transactions'],
+        summary:
+          'Cancel (undo) a refund transaction — deletes the refund row and restores remaining on the original',
+        security: [{ bearerAuth: [] }],
+      },
+    },
+    (req, reply) => transactionController.cancelRefund(req, reply),
+  );
+
   app.patch(
     '/:id',
     {
